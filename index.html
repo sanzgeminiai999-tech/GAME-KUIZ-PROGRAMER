@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Pemrograman (Dengan Timer)</title>
+
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --correct-color: #2ecc71;
+            --wrong-color: #e74c3c;
+            --bg-color: #f0f4f8;
+            --light-color: #ffffff;
+            --font-color: #333;
+        }
+
+        /* Reset Dasar */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        /* Kontainer Utama Game */
+        .quiz-container {
+            background: var(--light-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header (Timer & Skor) */
+        .quiz-header {
+            padding: 1.5rem 2rem;
+            background-color: #fdfdfd;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #score-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        #timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Progress Bar untuk Timer */
+        #timer-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+        }
+
+        #timer-bar {
+            height: 100%;
+            width: 100%;
+            background-color: var(--primary-color);
+            transition: width 1s linear;
+        }
+
+        /* Isi Kuis (Pertanyaan & Pilihan) */
+        .quiz-body {
+            padding: 2rem;
+        }
+
+        #question-text {
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+            min-height: 3em; /* Jaga ruang agar tidak 'melompat' */
+        }
+
+        #options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .btn-option {
+            width: 100%;
+            font-size: 1.1rem;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: var(--light-color);
+            color: var(--font-color);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-option:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            background-color: #f7f9fc;
+        }
+
+        .btn-option:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        /* Status Jawaban */
+        .btn-option.correct {
+            background-color: var(--correct-color);
+            border-color: var(--correct-color);
+            color: var(--light-color);
+            font-weight: bold;
+        }
+
+        .btn-option.wrong {
+            background-color: var(--wrong-color);
+            border-color: var(--wrong-color);
+            color: var(--light-color);
+            font-weight: bold;
+        }
+
+        /* Kontrol Game (Mulai, Main Lagi) */
+        .controls {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .btn {
+            font-size: 1.2rem;
+            padding: 0.8rem 2.5rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* Layar (Start/End) */
+        #start-screen,
+        #end-screen {
+            text-align: center;
+        }
+
+        #end-screen h2 {
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+
+        #final-score {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Kontrol Audio */
+        .audio-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        #mute-btn {
+            background: none;
+            border: 2px solid var(--secondary-color);
+            color: var(--secondary-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Utilitas */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Kuis Pemrograman</h1>
+
+    <div class="audio-control">
+        <audio id="audio-player" src="path/to/your-music.mp3" loop></audio>
+        <button id="mute-btn">🔇</button>
+    </div>
+
+    <div class="quiz-container">
+        
+        <div id="start-screen" class="controls">
+            <button id="start-btn" class="btn">Mulai Kuis!</button>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div class="quiz-header">
+                <span id="score-text">Skor: 0</span>
+                <span id="timer">15</span>
+            </div>
+            <div id="timer-bar-container">
+                <div id="timer-bar"></div>
+            </div>
+            
+            <div class="quiz-body">
+                <h2 id="question-text">Ini adalah teks pertanyaan...</h2>
+                <div id="options-container">
+                    </div>
+            </div>
+        </div>
+
+        <div id="end-screen" class="controls hidden">
+            <div>
+                <h2>Kuis Selesai!</h2>
+                <p id="final-score">Skor Akhir Anda: 0 / 0</p>
+                <button id="play-again-btn" class="btn">Main Lagi</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // === 1. Data Pertanyaan ===
+            // Anda bisa tambahkan ribuan pertanyaan di sini (seperti dari API)
+            const quizQuestions = [
+                {
+                    question: "Apa kepanjangan dari HTML?",
+                    options: [
+                        { text: "Hyper Trainer Marking Language", correct: false },
+                        { text: "Hyper Text Markup Language", correct: true },
+                        { text: "High Tech Modern Language", correct: false },
+                        { text: "Home Tool Management Logic", correct: false }
+                    ]
+                },
+                {
+                    question: "Manakah dari berikut ini yang digunakan untuk memberi style pada halaman web?",
+                    options: [
+                        { text: "HTML", correct: false },
+                        { text: "Python", correct: false },
+                        { text: "CSS", correct: true },
+                        { text: "JSON", correct: false }
+                    ]
+                },
+                {
+                    question: "Tipe data JavaScript untuk 'true' atau 'false' adalah...",
+                    options: [
+                        { text: "String", correct: false },
+                        { text: "Number", correct: false },
+                        { text: "Boolean", correct: true },
+                        { text: "Undefined", correct: false }
+                    ]
+                },
+                {
+                    question: "Manakah sintaks yang benar untuk 'IF statement' di JavaScript?",
+                    options: [
+                        { text: "if i = 5 then", correct: false },
+                        { text: "if (i == 5)", correct: true },
+                        { text: "if i == 5", correct: false },
+                        { text: "if (i = 5) then", correct: false }
+                    ]
+                },
+                {
+                    question: "Bagaimana cara Anda memanggil fungsi bernama 'myFunction'?",
+                    options: [
+                        { text: "call myFunction()", correct: false },
+                        { text: "myFunction.call()", correct: false },
+                        { text: "myFunction()", correct: true },
+                        { text: "invoke myFunction()", correct: false }
+                    ]
+                }
+            ];
+
+            const TIME_PER_QUESTION = 15; // Waktu per pertanyaan (detik)
+
+            // === 2. Seleksi Elemen DOM ===
+            const startScreen = document.getElementById('start-screen');
+            const quizScreen = document.getElementById('quiz-screen');
+            const endScreen = document.getElementById('end-screen');
+            
+            const startBtn = document.getElementById('start-btn');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            
+            const scoreText = document.getElementById('score-text');
+            const timerDisplay = document.getElementById('timer');
+            const timerBar = document.getElementById('timer-bar');
+            const questionText = document.getElementById('question-text');
+            const optionsContainer = document.getElementById('options-container');
+            const finalScore = document.getElementById('final-score');
+
+            const audioPlayer = document.getElementById('audio-player');
+            const muteBtn = document.getElementById('mute-btn');
+
+            // === 3. Variabel Status Game ===
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let timeLeft = TIME_PER_QUESTION;
+            let timerId = null;
+
+            // === 4. Fungsi Utama Game ===
+
+            /**
+             * Memulai Kuis
+             */
+            function startGame() {
+                // Coba putar audio (memerlukan interaksi pengguna)
+                audioPlayer.play().catch(error => {
+                    console.warn("Autoplay audio gagal. Perlu interaksi pengguna.", error);
+                });
+                
+                score = 0;
+                currentQuestionIndex = 0;
+                startScreen.classList.add('hidden');
+                endScreen.classList.add('hidden');
+                quizScreen.classList.remove('hidden');
+                
+                updateScoreDisplay();
+                loadQuestion();
+            }
+
+            /**
+             * Memuat Pertanyaan Berikutnya
+             */
+            function loadQuestion() {
+                resetState(); // Bersihkan status sebelumnya
+                
+                if (currentQuestionIndex >= quizQuestions.length) {
+                    endGame(); // Kuis selesai
+                    return;
+                }
+
+                const question = quizQuestions[currentQuestionIndex];
+                questionText.innerText = question.question;
+
+                // Buat tombol pilihan
+                question.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.innerText = option.text;
+                    button.classList.add('btn-option');
+                    button.dataset.correct = option.correct; // Simpan status jawaban di data-attribute
+                    button.addEventListener('click', selectAnswer);
+                    optionsContainer.appendChild(button);
+                });
+
+                startQuestionTimer();
+            }
+
+            /**
+            * Mereset status (timer & tombol) untuk pertanyaan baru
+             */
+            function resetState() {
+                clearInterval(timerId); // Hentikan timer lama
+                timeLeft = TIME_PER_QUESTION;
+                timerDisplay.innerText = timeLeft;
+                timerBar.style.width = '100%';
+                timerBar.style.transition = 'none'; // Reset transisi
+                
+                // Hapus pilihan sebelumnya
+                while (optionsContainer.firstChild) {
+                    optionsContainer.removeChild(optionsContainer.firstChild);
+                }
+                
+                // Paksa reflow agar transisi timer berfungsi lagi
+                void timerBar.offsetWidth; 
+                timerBar.style.transition = `width ${TIME_PER_QUESTION}s linear`;
+            }
+
+            /**
+             * Memulai Timer Pertanyaan
+             */
+            function startQuestionTimer() {
+                timerDisplay.innerText = timeLeft;
+                timerBar.style.width = '0%'; // Mulai animasi bar
+
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    timerDisplay.innerText = timeLeft;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(timerId);
+                        handleTimeUp();
+                    }
+                }, 1000);
+            }
+
+            /**
+             * Dipanggil saat pemain memilih jawaban
+             */
+            function selectAnswer(e) {
+                clearInterval(timerId); // Hentikan timer
+
+                const selectedBtn = e.target;
+                const isCorrect = selectedBtn.dataset.correct === 'true';
+
+                if (isCorrect) {
+                    score++;
+                    selectedBtn.classList.add('correct');
+                } else {
+                    selectedBtn.classList.add('wrong');
+                }
+
+                // Tampilkan jawaban yang benar dan nonaktifkan semua tombol
+                Array.from(optionsContainer.children).forEach(button => {
+                    if (button.dataset.correct === 'true') {
+                        button.classList.add('correct');
+                    }
+                    button.disabled = true;
+                });
+                
+                updateScoreDisplay();
+
+                // Pindah ke pertanyaan berikutnya setelah 1.5 detik
+                setTimeout(nextQuestion, 1500);
+            }
+
+            /**
+             * Dipanggil jika waktu habis
+             */
+            function handleTimeUp() {
+                // Nonaktifkan semua tombol
+                Array.from(optionsContainer.children).forEach(button => {
+                    if (button.dataset.correct === 'true') {
+                        button.classList.add('correct'); // Tunjukkan jawaban benar
+                    }
+                    button.disabled = true;
+                });
+                
+                questionText.innerText = "Waktu Habis!";
+
+                // Pindah ke pertanyaan berikutnya setelah 1.5 detik
+                setTimeout(nextQuestion, 1500);
+            }
+
+            /**
+             * Memuat pertanyaan selanjutnya
+             */
+            function nextQuestion() {
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+
+            /**
+             * Mengakhiri Kuis
+             */
+            function endGame() {
+                quizScreen.classList.add('hidden');
+                endScreen.classList.remove('hidden');
+                finalScore.innerText = `Skor Akhir Anda: ${score} / ${quizQuestions.length}`;
+            }
+
+            /**
+             * Memperbarui UI Skor
+             */
+            function updateScoreDisplay() {
+                scoreText.innerText = `Skor: ${score}`;
+            }
+
+            /**
+             * Mengontrol Audio (Mute/Unmute)
+             */
+            function toggleMute() {
+                audioPlayer.muted = !audioPlayer.muted;
+                muteBtn.innerText = audioPlayer.muted ? '🔇' : '🔊';
+            }
+
+            // === 5. Event Listeners ===
+            startBtn.addEventListener('click', startGame);
+            playAgainBtn.addEventListener('click', startGame);
+            muteBtn.addEventListener('click', toggleMute);
+
+        });
+    </script>
+
+</body>
+</html>
